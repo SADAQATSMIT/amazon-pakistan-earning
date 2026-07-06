@@ -1,0 +1,150 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user account details, balance, and status.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "balance": { "type": "number" },
+        "activePlanId": { "type": "string" },
+        "paymentMethod": { "type": "string", "enum": ["JazzCash", "EasyPaisa", "None"] },
+        "accountNumber": { "type": "string" },
+        "isBlocked": { "type": "boolean" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "balance", "role"]
+    },
+    "Plan": {
+      "title": "Membership Plan",
+      "description": "Investment plans that users can purchase.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "dailyTasks": { "type": "number" },
+        "earningPerTask": { "type": "number" }
+      },
+      "required": ["name", "price", "dailyTasks", "earningPerTask"]
+    },
+    "Task": {
+      "title": "Earning Task",
+      "description": "Tasks assigned to plans for users to complete.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["image", "video"] },
+        "content": { "type": "string" },
+        "planId": { "type": "string" },
+        "duration": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "content", "planId", "duration"]
+    },
+    "Deposit": {
+      "title": "Deposit Request",
+      "description": "Records of user deposits awaiting admin approval.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "amount": { "type": "number" },
+        "screenshotUrl": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "transactionId", "status"]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal Request",
+      "description": "User requests to withdraw earnings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "amount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "accountNumber": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "paid", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "paymentMethod", "accountNumber", "status"]
+    },
+    "AppSetting": {
+      "title": "App Configuration",
+      "description": "Global settings for the application.",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "minWithdraw": { "type": "number" },
+        "jazzCashNumber": { "type": "string" },
+        "easyPaisaNumber": { "type": "string" },
+        "tasksEnabled": { "type": "boolean" },
+        "depositsEnabled": { "type": "boolean" }
+      },
+      "required": ["appName", "minWithdraw"]
+    },
+    "PromoCode": {
+      "title": "Promo Code",
+      "description": "Bonus codes for users.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "bonus": { "type": "number" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["code", "bonus"]
+    },
+    "TaskCompletion": {
+      "title": "Task Completion Log",
+      "description": "Records of users completing tasks.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "taskId": { "type": "string" },
+        "earnings": { "type": "number" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "taskId", "earnings", "completedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User documents."
+    },
+    "/plans/{planId}": {
+      "schema": "Plan",
+      "description": "Available earning plans."
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Tasks for users."
+    },
+    "/deposits/{depositId}": {
+      "schema": "Deposit",
+      "description": "Money deposit requests."
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": "Withdrawal",
+      "description": "Money withdrawal requests."
+    },
+    "/settings/app": {
+      "schema": "AppSetting",
+      "description": "Global app configuration."
+    },
+    "/promoCodes/{codeId}": {
+      "schema": "PromoCode",
+      "description": "Promo codes."
+    },
+    "/taskCompletions/{completionId}": {
+      "schema": "TaskCompletion",
+      "description": "Historical record of task completions."
+    }
+  }
+}

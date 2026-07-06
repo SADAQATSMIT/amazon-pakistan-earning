@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.email == 'skb2720305@gmail.com');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'skb2720305@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isAdmin() || (
+        isOwner(userId) && 
+        isVerified() &&
+        (!resource.data.isBlocked) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'phone', 'paymentMethod', 'accountNumber', 
+          'activePlanId', 'planName', 'balance', 'totalEarnings',
+          'tasksCompleted', 'updatedAt'
+        ])
+      ) || (
+        isSignedIn() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'balance', 'referralEarnings'])
+      );
+    }
+
+    // Plans
+    match /plans/{planId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Tasks
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Deposits
+    match /deposits/{depositId} {
+      allow read, list: if isAdmin() || (isVerified() && resource.data.userId == request.auth.uid);
+      allow create: if isVerified() && 
+                      request.resource.data.userId == request.auth.uid && 
+                      request.resource.data.status == 'pending';
+      allow update: if isAdmin();
+    }
+
+    // Withdrawals
+    match /withdrawals/{withdrawalId} {
+      allow read, list: if isAdmin() || (isVerified() && resource.data.userId == request.auth.uid);
+      allow create: if isVerified() && 
+                      request.resource.data.userId == request.auth.uid && 
+                      request.resource.data.status == 'pending';
+      allow update: if isAdmin();
+    }
+
+    // Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Notifications
+    match /notifications/{notifId} {
+      allow read: if isVerified() && resource.data.userId == request.auth.uid;
+      allow list: if isVerified() && resource.data.userId == request.auth.uid;
+      allow update: if isVerified() && resource.data.userId == request.auth.uid && 
+                   request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create: if isAdmin();
+    }
+
+    // Task Completions
+    match /taskCompletions/{completionId} {
+      allow read, list: if isAdmin() || (isVerified() && resource.data.userId == request.auth.uid);
+      allow create: if isVerified() && 
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.completedAt == request.time;
+    }
+
+    // Activity Logs
+    match /activityLogs/{logId} {
+      allow read, list: if isAdmin();
+      allow create: if isSignedIn() || isAdmin();
+    }
+
+    // Promo Codes
+    match /promoCodes/{codeId} {
+      allow read: if isVerified();
+      allow write: if isAdmin();
+    }
+
+    // Support Tickets
+    match /tickets/{ticketId} {
+      allow read, list: if isAdmin() || (isVerified() && resource.data.userId == request.auth.uid);
+      allow create: if isVerified() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+    }
+
+    // System Settings
+    match /systemSettings/{settingId} {
+      allow read: if true; // Needed for login check partially, but we could restrict it
+      allow write: if isAdmin();
+    }
+  }
+}

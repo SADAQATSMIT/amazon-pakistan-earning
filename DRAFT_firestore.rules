@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(userId) && 
+                      incoming().role == 'user' && 
+                      incoming().balance == 0 &&
+                      incoming().isBlocked == false;
+      allow update: if isAdmin() || (
+        isOwner(userId) && 
+        !existing().isBlocked &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'paymentMethod', 'accountNumber'])
+      );
+    }
+
+    // Plans
+    match /plans/{planId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Tasks
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Deposits
+    match /deposits/{depositId} {
+      allow read: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && 
+                      incoming().userId == request.auth.uid && 
+                      incoming().status == 'pending' &&
+                      incoming().amount > 0;
+      allow update: if isAdmin() && 
+                      incoming().diff(existing()).affectedKeys().hasAny(['status']);
+    }
+
+    // Withdrawals
+    match /withdrawals/{withdrawalId} {
+      allow read: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && 
+                      incoming().userId == request.auth.uid && 
+                      incoming().status == 'pending' &&
+                      incoming().amount >= 300;
+      allow update: if isAdmin() && 
+                      incoming().diff(existing()).affectedKeys().hasAny(['status']);
+    }
+
+    // Settings
+    match /settings/app {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Promo Codes
+    match /promoCodes/{codeId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+      // Users can check if valid via a specific path or get, but rules should be tight
+      allow get: if isSignedIn();
+    }
+
+    // Task Completions
+    match /taskCompletions/{completionId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && 
+                      incoming().userId == request.auth.uid &&
+                      incoming().completedAt == request.time;
+    }
+  }
+}

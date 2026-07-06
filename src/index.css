@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-slate-900 antialiased;
+  }
+}
+
+.bento-card {
+  @apply bg-white border border-gray-100 shadow-sm transition-all duration-300;
+}
+
+.bento-gradient-orange {
+  @apply bg-gradient-to-br from-orange-500 to-red-600 text-white;
+}
